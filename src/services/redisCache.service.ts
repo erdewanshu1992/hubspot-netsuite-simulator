@@ -5,22 +5,34 @@ import { ExpandedLineItemsHubSpotWebhookEvent, HubSpotWebhookEvent } from '../ty
 class RedisCacheService {
   private client: Redis;
   private isConnected: boolean = false;
+  private connectionAttempts: number = 0;
+  private maxConnectionAttempts: number = 2; // Limit to 2 attempts as requested
 
   constructor() {
     this.client = new Redis(ENV.REDIS_URL, {
       password: ENV.REDIS_PASSWORD || undefined,
-      maxRetriesPerRequest: 3,
-      lazyConnect: true
+      maxRetriesPerRequest: 2, // Limit to 2 retries as requested
+      lazyConnect: true,
+      connectTimeout: 5000,
+      commandTimeout: 3000,
+      retryDelayOnFailover: 100
     });
 
     this.client.on('connect', () => {
       console.log('Redis connected successfully');
       this.isConnected = true;
+      this.connectionAttempts = 0; // Reset counter on successful connection
     });
 
     this.client.on('error', (error) => {
-      console.error('Redis connection error:', error);
+      this.connectionAttempts++;
+      console.error(`Redis connection error (attempt ${this.connectionAttempts}):`, error);
       this.isConnected = false;
+
+      // Don't retry if we've exceeded max attempts
+      if (this.connectionAttempts >= this.maxConnectionAttempts) {
+        console.error('Max Redis connection attempts reached, giving up');
+      }
     });
 
     this.client.on('close', () => {
@@ -28,19 +40,38 @@ class RedisCacheService {
       this.isConnected = false;
     });
 
-    // Initialize connection
-    this.connect();
+    // Don't auto-connect in constructor for testing
+    if (process.env.NODE_ENV !== 'test') {
+      this.connect();
+    }
   }
 
   /**
    * Connect to Redis
    */
   private async connect(): Promise<void> {
+    if (this.connectionAttempts >= this.maxConnectionAttempts) {
+      console.log('Max connection attempts reached, skipping connection');
+      return;
+    }
+
     try {
+      this.connectionAttempts++;
       await this.client.connect();
     } catch (error) {
-      console.error('Failed to connect to Redis:', error);
+      console.error(`Failed to connect to Redis (attempt ${this.connectionAttempts}):`, error);
+      if (this.connectionAttempts < this.maxConnectionAttempts) {
+        // Retry after delay
+        setTimeout(() => this.connect(), 1000);
+      }
     }
+  }
+
+  /**
+   * Connect to Redis (public method for testing)
+   */
+  public async connectForTesting(): Promise<void> {
+    await this.connect();
   }
 
   /**
@@ -358,9 +389,24 @@ class RedisCacheService {
    */
   async close(): Promise<void> {
     try {
-      await this.client.quit();
+      if (this.client.status === 'ready') {
+        await this.client.quit();
+      }
     } catch (error) {
       console.error('Error closing Redis connection:', error);
+    }
+  }
+
+  /**
+   * Disconnect Redis connection (for testing)
+   */
+  async disconnectForTesting(): Promise<void> {
+    try {
+      if (this.client.status === 'ready') {
+        await this.client.disconnect();
+      }
+    } catch (error) {
+      console.error('Error disconnecting Redis for testing:', error);
     }
   }
 }
