@@ -18,6 +18,7 @@ jest.mock('../src/services/mapping.service');
 jest.mock('../src/services/validation.service');
 jest.mock('../src/services/redisCache.service');
 jest.mock('../src/services/email.service');
+jest.mock('../src/services/idempotency.service');
 
 describe('WebhookController', () => {
   let mockRequest: Partial<Request>;
@@ -36,6 +37,117 @@ describe('WebhookController', () => {
 
     // Clear all mocks
     jest.clearAllMocks();
+
+    // Setup default mocks for successful test cases
+    const mockDealService = require('../src/services/deal.service').default;
+    jest.mocked(mockDealService.checkDealProperties).mockResolvedValue({
+      isDealTest: false,
+      isInvalidStage: false,
+      dealStageClosed: false,
+      dealStageClosedWon: false,
+      dealPipelineValid: true,
+      opportunityNumber: 'OPP-001',
+      netsuiteId: '12345',
+      purchasingContractId: '',
+      dealLineItems: [
+        {
+          id: 'line-item-1',
+          name: 'Test Line Item'
+        }
+      ],
+      dealCompanies: [
+        {
+          id: 'company-1',
+          name: 'Test Company'
+        }
+      ],
+      createdAt: '2023-01-01T00:00:00Z',
+      dealUpdatedById: 'user-123'
+    });
+
+    // Mock HubSpot service
+    const mockHubspotService = require('../src/services/hubspot.service').default;
+    jest.mocked(mockHubspotService.getDeal).mockResolvedValue({
+      properties: {
+        hs_object_id: '123',
+        dealname: 'Test Deal',
+        amount: '1000',
+        dealstage: 'qualifiedtobuy',
+        pipeline: 'default'
+      }
+    });
+    jest.mocked(mockHubspotService.getDealAssociations).mockResolvedValue({
+      lineItems: [
+        {
+          id: 'line-item-1',
+          name: 'Test Line Item'
+        }
+      ],
+      companies: [
+        {
+          id: 'company-1',
+          name: 'Test Company'
+        }
+      ]
+    });
+    jest.mocked(mockHubspotService.updateDealProperties).mockResolvedValue(undefined);
+
+    // Mock NetSuite service
+    const mockNetsuiteService = require('../src/services/netsuite.service').default;
+    jest.mocked(mockNetsuiteService.updateOpportunity).mockResolvedValue(undefined);
+    jest.mocked(mockNetsuiteService.patchOpportunityItems).mockResolvedValue(undefined);
+    jest.mocked(mockNetsuiteService.syncOpportunityFromDeal).mockResolvedValue('12345');
+
+    // Mock Line Item service
+    const mockLineItemService = require('../src/services/lineItem.service').default;
+    jest.mocked(mockLineItemService.getDealItemsDataForProcessing).mockResolvedValue({
+      items: [
+        {
+          item: {
+            itemid: 'ITEM-001',
+            quantity: 1,
+            rate: '100.00'
+          }
+        }
+      ],
+      failedItems: []
+    });
+    jest.mocked(mockLineItemService.buildOpportunityItems).mockReturnValue([
+      {
+        item: {
+          itemid: 'ITEM-001',
+          quantity: 1,
+          rate: '100.00'
+        }
+      }
+    ]);
+    jest.mocked(mockLineItemService.updateLineItemProperties).mockResolvedValue(undefined);
+
+    // Mock Redis cache service
+    const mockRedisCacheService = require('../src/services/redisCache.service').default;
+    jest.mocked(mockRedisCacheService.storeMohavePriceChange).mockResolvedValue(undefined);
+    jest.mocked(mockRedisCacheService.checkMohavePriceChange).mockResolvedValue(null);
+
+    // Mock Mapping service
+    const mockMappingService = require('../src/services/mapping.service').default;
+    jest.mocked(mockMappingService.transformDealToOpportunity).mockReturnValue({
+      externalId: '123',
+      title: 'Test Deal',
+      amount: 1000,
+      stage: '1',
+      customerId: 'company-1',
+      custbody_deal_pipeline: 'default',
+      custbody_analytics_source: '',
+      probability: 0,
+      custbody_hubspot_deal_id: '123',
+      custbody_opportunity_number: 'OPP-001'
+    });
+    jest.mocked(mockMappingService.mapHSInternalProperty).mockReturnValue('price');
+    jest.mocked(mockMappingService.mapNSInternalProperty).mockReturnValue('rate');
+
+    // Mock Idempotency service
+    const mockIdempotencyService = require('../src/services/idempotency.service').default;
+    jest.mocked(mockIdempotencyService.validateIdempotencyKey).mockReturnValue(true);
   });
 
   describe('handleDealCreation', () => {
@@ -98,9 +210,9 @@ describe('WebhookController', () => {
         ]
       } as Partial<Request>;
 
-      // Mock service to throw error
-      const mockDealService = jest.mocked(await import('../src/services/deal.service')).default;
-      mockDealService.syncDealToNetSuite = jest.fn().mockRejectedValue(new Error('Service error'));
+      // Mock the deal service properly
+      const mockDealService = await import('../src/services/deal.service');
+      jest.mocked(mockDealService.default.syncDealToNetSuite).mockRejectedValue(new Error('Service error'));
 
       await webhookController.handleDealCreation(mockRequest as Request, mockResponse as Response);
 
@@ -199,8 +311,8 @@ describe('WebhookController', () => {
       } as Partial<Request>;
 
       // Mock service to throw error
-      const mockDealService = jest.mocked(await import('../src/services/deal.service')).default;
-      mockDealService.checkDealProperties = jest.fn().mockRejectedValue(new Error('Processing error'));
+      const mockDealService = await import('../src/services/deal.service');
+      jest.mocked(mockDealService.default.checkDealProperties).mockRejectedValue(new Error('Processing error'));
 
       await webhookController.handleLineItemCreation(mockRequest as Request, mockResponse as Response);
 
@@ -273,8 +385,8 @@ describe('WebhookController', () => {
       } as Partial<Request>;
 
       // Mock service to throw error
-      const mockDealService = jest.mocked(await import('../src/services/deal.service')).default;
-      mockDealService.checkDealProperties = jest.fn().mockRejectedValue(new Error('Processing error'));
+      const mockDealService = await import('../src/services/deal.service');
+      jest.mocked(mockDealService.default.checkDealProperties).mockRejectedValue(new Error('Processing error'));
 
       await webhookController.handleQuotePublished(mockRequest as Request, mockResponse as Response);
 
