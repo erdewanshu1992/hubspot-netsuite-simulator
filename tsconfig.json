@@ -9,7 +9,7 @@
     "outDir": "dist",
     "baseUrl": ".",
     "paths": { "*": ["./*"] },
-    "types": ["cypress", "node", "jest"]
+    "types": ["node", "jest"]
   },
   "include": ["src", "tests", "cypress"],
   "ts-node": {
