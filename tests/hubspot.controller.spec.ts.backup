@@ -1,0 +1,45 @@
+import { validateDeal } from '../src/services/validation.service';
+import { mapDealToOpportunity } from '../src/services/mapping.service';
+
+describe('Validation Service', () => {
+  it('rejects missing company', () => {
+    const res = validateDeal({
+      dealname: 'X',
+      amount: 1,
+      pipeline: '36643521',
+      dealstage: 'qualifiedtobuy'
+    } as any);
+    // @ts-ignore
+    expect(res.ok).toBeFalsy();
+    // @ts-ignore
+    expect(res.reason).toBe('missing_company');
+  });
+
+  it('accepts a valid deal', () => {
+    const res = validateDeal({
+      dealname: 'Good',
+      amount: 1000,
+      pipeline: '36643521',
+      dealstage: 'qualifiedtobuy',
+      companyId: 'cust_1',
+      primaryContactId: 'cont_1'
+    });
+    // @ts-ignore
+    expect(res.ok).toBeTruthy();
+  });
+});
+
+describe('Mapping', () => {
+  it('maps deal to opportunity', () => {
+    const payload = mapDealToOpportunity('123', {
+      dealname: 'D',
+      amount: 10,
+      pipeline: '36643521',
+      dealstage: 'qualifiedtobuy',
+      companyId: 'cust_1',
+      primaryContactId: 'cont_1'
+    });
+    expect(payload.externalId).toBe('hs_deal_123');
+    expect(payload.customerId).toBe('cust_1');
+  });
+});

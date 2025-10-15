@@ -1,0 +1,45 @@
+import { Request, Response } from 'express';
+import crypto from 'crypto';
+import { getDealProperties } from '../services/hubspot.service';
+import { validateDeal } from '../services/validation.service';
+import { mapDealToOpportunity } from '../services/mapping.service';
+import { postOpportunity } from '../services/erp.service';
+import { beginIdempotent, completeIdempotent, failIdempotent } from '../services/idempotency.service';
+
+function hash(obj: any) {
+  return crypto.createHash('sha256').update(JSON.stringify(obj)).digest('hex');
+}
+
+export async function handleDealEvent(req: Request, res: Response) {
+  const reqId = (req as any).id;
+  const { objectId } = req.body || {};
+  if (!objectId) return res.status(400).json({ error: 'objectId required' });
+
+  const dealId = String(objectId);
+  const idemKey = `hs_deal_create:${dealId}`;
+
+  try {
+    const idem = await beginIdempotent(idemKey);
+    if (idem?.status === 'completed') {
+      return res.json({ status: 'duplicate_ignored', requestId: reqId });
+    }
+
+    const props = await getDealProperties(dealId);
+
+    const valid = validateDeal(props);
+    if (!valid.ok) {
+      await completeIdempotent(idemKey, hash({ skipped: valid.reason }));
+      return res.status(400).json({ status: 'skipped', reason: valid.reason, requestId: reqId });
+    }
+
+    const payload = mapDealToOpportunity(dealId, props);
+
+    const result = await postOpportunity(payload);
+
+    await completeIdempotent(idemKey, hash(result));
+    return res.json({ status: 'ok', payload, result, requestId: reqId });
+  } catch (err: any) {
+    await failIdempotent(idemKey, err);
+    return res.status(500).json({ error: 'internal_error', requestId: reqId });
+  }
+}
