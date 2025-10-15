@@ -1,0 +1,53 @@
+version: 2
+updates:
+  # Enable version updates for npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    assignees:
+      - "your-github-username"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    ignore:
+      # Ignore major version updates for certain packages if needed
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
+    groups:
+      # Group non-major updates together
+      typescript:
+        patterns:
+          - "typescript"
+          - "@types/*"
+      testing:
+        patterns:
+          - "jest*"
+          - "@types/jest"
+          - "cypress"
+          - "ts-jest"
+      linting:
+        patterns:
+          - "eslint*"
+          - "@typescript-eslint/*"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    assignees:
+      - "your-github-username"
+    commit-message:
+      prefix: "chore"
+      include: "scope"

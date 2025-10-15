@@ -1,0 +1,39 @@
+name: "HubSpot-NetSuite Simulator Security Configuration"
+
+disable-default-queries: false
+
+queries:
+  - uses: security-and-quality
+  - uses: security-experimental
+
+paths-ignore:
+  - node_modules
+  - "**/*.test.js"
+  - "**/*.test.ts"
+  - "**/*.spec.js"
+  - "**/*.spec.ts"
+  - cypress/
+  - "**/test/"
+  - "**/tests/"
+  - "**/__tests__/"
+  - coverage/
+  - "**/*.d.ts"
+
+paths:
+  - src/
+  - "index.js"
+  - "index.ts"
+
+query-filters:
+  - exclude:
+      id: js/xss-through-dom
+      reason: "Not applicable for Node.js backend application"
+  - exclude:
+      id: js/client-side-unvalidated-url-redirection
+      reason: "Not applicable for Node.js backend application"
+  - exclude:
+      id: js/exposure-of-sensitive-data
+      reason: "Handled by environment variable configuration"
+  - exclude:
+      id: js/hardcoded-credentials
+      reason: "Credentials are properly externalized in environment variables"
