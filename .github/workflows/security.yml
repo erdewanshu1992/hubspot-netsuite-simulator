@@ -47,7 +47,7 @@ jobs:
       uses: actions/dependency-review-action@v4
       with:
         fail-on-severity: moderate
-        allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+        allow-licenses: MIT, MIT-0, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, WTFPL
 
   vulnerability-scan:
     runs-on: ubuntu-latest
@@ -89,5 +89,5 @@ jobs:
 
     - name: Check licenses
       run: |
-        license-checker --production --json | jq -r 'keys[] as $k | "\($k): \(.[$k].licenses)"' | grep -v -E "(MIT|Apache-2.0|BSD|ISC|WTFPL)"
+        license-checker --production --json | jq -r 'keys[] as $k | "\($k): \(.[$k].licenses)"' | grep -v -E "(MIT|MIT-0|Apache-2.0|BSD|ISC|WTFPL)"
       continue-on-error: true
