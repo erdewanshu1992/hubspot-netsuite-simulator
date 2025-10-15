@@ -1,0 +1,51 @@
+{
+  "name": "hubspot-netsuite-simulator",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --loader ts-node/esm src/index.ts",
+    "start": "node --loader ts-node/esm src/index.ts",
+    "test": "jest --runInBand",
+    "cypress:run": "cypress run",
+    "cypress:open": "cypress open"
+  },
+  "dependencies": {
+    "@types/redis": "^4.0.10",
+    "axios": "^1.7.2",
+    "axios-retry": "^4.4.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "ioredis": "^5.8.1",
+    "mongoose": "^8.6.3",
+    "nodemailer": "^6.9.13",
+    "pino": "^9.3.2",
+    "pino-http": "^9.0.0",
+    "redis": "^5.8.3",
+    "uuid": "^9.0.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.11",
+    "@types/node": "^20.19.21",
+    "@types/nodemailer": "^7.0.2",
+    "@types/uuid": "^10.0.0",
+    "cypress": "^13.12.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "moduleFileExtensions": [
+      "ts",
+      "js"
+    ],
+    "roots": [
+      "<rootDir>/tests"
+    ]
+  }
+}
