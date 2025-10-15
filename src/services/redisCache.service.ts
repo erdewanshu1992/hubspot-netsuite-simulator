@@ -14,8 +14,7 @@ class RedisCacheService {
       maxRetriesPerRequest: 2, // Limit to 2 retries as requested
       lazyConnect: true,
       connectTimeout: 5000,
-      commandTimeout: 3000,
-      retryDelayOnFailover: 100
+      commandTimeout: 3000
     });
 
     this.client.on('connect', () => {
