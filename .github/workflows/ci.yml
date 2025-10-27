@@ -72,14 +72,14 @@ jobs:
       continue-on-error: true
 
     - name: Upload Cypress screenshots (on failure)
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: failure()
       with:
         name: cypress-screenshots
         path: cypress/screenshots
 
     - name: Upload Cypress videos (on failure)
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       if: failure()
       with:
         name: cypress-videos
